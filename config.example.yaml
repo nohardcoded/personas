@@ -1,0 +1,32 @@
+# persona-gen config - copy to config.yaml and set your model paths.
+# scripts/install.sh writes a working config.yaml for you; this file documents every option.
+output_dir: ./output
+lock_file: /tmp/persona-gen.lock
+
+engines:
+  zimage:
+    type: zimage
+    label: Z-Image
+    model: ./models/Z-Image-Turbo        # diffusers dir the installer downloads (Tongyi-MAI/Z-Image-Turbo, Apache-2.0)
+    steps: 9
+    cfg: 0.0
+
+# Optional: a curated SDXL engine (base -> realism refiner -> face / feet / hands refine).
+# Bring your own SDXL checkpoint (diffusers format) and UNCOMMENT this block. Leaving it
+# commented keeps the UI to the one working engine; an enabled engine with a missing model
+# path would just fail when selected. See docs/MODELS.md.
+#  sdxl:
+#    type: sdxl
+#    label: SDXL (curated)
+#    model: ~/models/your-sdxl-checkpoint  # any SDXL checkpoint in diffusers format
+#    steps: 28
+#    cfg: 6.5
+#    # --- optional curation; each stage is auto-skipped if its model is absent ---
+#    refiner: ~/models/your-refiner-sdxl   # optional 2nd SDXL for the realism img2img pass
+#    refiner_strength: 0.35
+#    feet_lora: ~/models/loras/feet.safetensors    # optional
+#    hand_lora: ~/models/loras/hands.safetensors   # optional
+#    detectors:
+#      yoloface:  ~/models/onnx-face/yoloface_8n.onnx            # optional (face refine)
+#      pose_task: ~/models/mediapipe/pose_landmarker_heavy.task  # optional (feet refine)
+#      hand_task: ~/models/mediapipe/hand_landmarker.task        # optional (hands refine)

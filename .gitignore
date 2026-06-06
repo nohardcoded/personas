@@ -1,0 +1,65 @@
+# --- persona-gen runtime ---
+output/
+config.yaml
+*.lock
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.venv/
+venv/
+env/
+.python-version
+
+# --- tooling caches ---
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+
+# --- model weights / large artifacts (never commit) ---
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.gguf
+*.task
+models/
+
+# --- generated media (output images stay out of git) ---
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.mp4
+
+# but DO track documentation assets (README screenshots, demo media)
+!docs/assets/**
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# --- IDE / editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- secrets / env ---
+.env
+.env.*
+*.pem
+*.key

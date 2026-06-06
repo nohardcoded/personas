@@ -1,0 +1,245 @@
+<!doctype html><html><head><meta charset=utf-8><title>Gen UI</title><style>
+body{background:#0f0f12;color:#e6e6e6;font-family:JetBrains Mono,monospace;margin:0;display:flex;height:100vh}
+#side{width:380px;padding:16px;border-right:1px solid #2a2a30;overflow:auto}
+#main{flex:1;padding:16px;overflow:auto}
+h1{font-size:16px;margin:0 0 12px}label{font-size:12px;color:#9aa;display:block;margin:10px 0 3px}
+input,select,textarea{width:100%;background:#1a1a20;border:1px solid #33333c;color:#e6e6e6;border-radius:6px;padding:7px;font-family:inherit;font-size:13px;box-sizing:border-box}
+textarea{height:80px;resize:vertical}
+.row{display:flex;gap:8px}.row>div{flex:1}
+button{margin-top:14px;width:100%;background:#3b82f6;color:#fff;border:0;border-radius:7px;padding:11px;font-size:14px;font-weight:600;cursor:pointer}
+button:hover{background:#2f6fd6}
+.bar{background:#1a1a20;border:1px solid #2a2a30;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.kv b{color:#6cf}.run{color:#4f4}.wait{color:#fb4}
+.prog{height:6px;background:#222;border-radius:3px;overflow:hidden;margin-top:6px}.prog>i{display:block;height:100%;background:#3b82f6;width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.grid img{width:100%;border-radius:8px;border:1px solid #222;cursor:pointer}
+.job{font-size:12px;color:#9aa;border-bottom:1px solid #222;padding:6px 0}
+.hint{font-size:11px;color:#6a6a78;margin:3px 0 2px;line-height:1.35}
+</style></head><body>
+<div id=side>
+ <h1>🎨 Generator</h1>
+ <div class=hint style=color:#8a8;margin-bottom:8px>Pick an engine, type a prompt, click <b>Generate</b>. Live preview top, finished images in the gallery.</div>
+ <label>Engine</label><select id=engine onchange="defs();plen()"></select>
+ <div class=hint><b>Z-Image</b> - fast, SFW. <b>Pony</b> - realistic, slower.</div>
+ <details style=margin:2px 0 6px>
+  <summary style=cursor:pointer;font-size:12px;color:#6cf>Which engine?</summary>
+  <div class=hint style=line-height:1.5>
+   <b style=color:#9c9>Z-Image</b> - fast (~60-70s), single pass. Best for SFW: lifestyle, gym,
+   portraits, editorial. Clean photoreal, strong prompt adherence. Weaker at explicit.<br><br>
+   <b style=color:#c9c>Pony</b> - slower (~250s), 5-stage (skin realism, face, feet, hands).
+   Best for NSFW/explicit and body detail. Leans NSFW even on SFW prompts; use Z-Image for
+   guaranteed-safe output.
+  </div>
+ </details>
+ <label>Prompt (English)</label>
+ <textarea id=prompt oninput=plen() placeholder="e.g. a fit woman working out at the gym, sweaty, candid photo, natural light"></textarea>
+ <div class=hint>Describe: who, where, doing what, style.</div>
+ <div id=plen class=hint></div>
+ <label>Format</label>
+ <select id=format>
+  <option value=portrait>Portrait (recommended)</option>
+  <option value=tall>Tall - full body</option>
+  <option value=square>Square</option>
+  <option value=landscape>Landscape</option>
+  <option value=wide>Wide</option>
+ </select>
+ <label>Images</label>
+ <select id=count><option>1</option><option>2</option><option>3</option><option>4</option><option>6</option><option>8</option></select>
+ <button onclick=gen()>Generate ▶</button>
+ <details style=margin-top:12px>
+  <summary style=cursor:pointer;font-size:12px;color:#9aa>Advanced (optional)</summary>
+  <label>Negative</label><input id=negative placeholder="leave empty = auto">
+  <div class=hint>What to avoid (e.g. blurry, deformed hands). Empty = auto.</div>
+  <div class=row><div><label>Steps</label><input id=steps type=number></div>
+    <div><label>CFG</label><input id=cfg type=number step=0.5></div></div>
+  <div class=hint>Steps = quality vs time. CFG = prompt adherence. Defaults are good.</div>
+  <label>Seed (0 = random)</label><input id=seed type=number value=0>
+  <div class=hint>Same seed + prompt = same image.</div>
+ </details>
+ <div id=msg style=margin-top:10px;font-size:12px;color:#fb4;line-height:1.4></div>
+</div>
+<div id=main>
+ <div class=bar id=status>loading…</div>
+ <div class=bar id=queue style="display:none"></div>
+ <div class=bar id=errs style="display:none;border-color:#a33;background:#2a1414;color:#f99"></div>
+ <div style="display:flex;gap:8px;align-items:center;font-size:13px;color:#889;margin:4px 0;flex-wrap:wrap">
+  <b>Gallery</b> <span style=color:#667>click = metadata, checkbox = select</span>
+  <button onclick=selAll() style="width:auto;margin:0;padding:3px 8px;font-size:11px;background:#333">Select all</button>
+  <span id=selinfo style="font-size:12px;color:#6cf"></span>
+  <span style=flex:1></span>
+  <select id=fEngine onchange=setFilter() style="width:auto;padding:3px 6px;font-size:12px"><option value="">all engines</option><option value=pony>Pony</option><option value=zimage>Z-Image</option></select>
+  <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#9aa;margin:0"><input type=checkbox id=fFav onchange=setFilter() style="width:auto;margin:0"> ★ favorites</label>
+ </div>
+ <div class=grid id=grid></div>
+</div>
+<div id=modal onclick="if(event.target===this)closeMeta()" style="display:none;position:fixed;inset:0;background:#000b;z-index:50;align-items:center;justify-content:center;padding:24px">
+ <div style="position:relative;background:#16161c;border:1px solid #333;border-radius:12px;padding:18px;max-width:920px;max-height:88vh;overflow:auto">
+  <span onclick=closeMeta() style="position:absolute;top:8px;right:16px;cursor:pointer;font-size:22px;color:#aaa">✕</span>
+  <div id=modalbody style=display:flex;gap:16px></div>
+ </div>
+</div>
+<script>
+let ENG={};
+async function status(){
+ const r=await (await fetch('/api/status')).json();
+ if(!Object.keys(ENG).length){ENG=r.engines;const s=document.getElementById('engine');
+   s.innerHTML=Object.entries(ENG).map(([k,v])=>`<option value="${esc(k)}">${esc(v.label)}</option>`).join('');defs();loadCfg();plen();}
+ const c=r.current;
+ let h=`<span class=kv>lock <b class="${r.lock.includes('held by ui')?'run':r.lock.includes('wait')?'wait':''}">${r.lock}</b></span> · queue <b>${r.qsize}</b>`;
+ if(c){const pct=c.total_steps?Math.round(100*c.step/c.total_steps):0;
+   h+=`<div style=margin-top:6px;display:flex;gap:12px;align-items:flex-start>`+
+      `<img src="/api/preview/${c.id}?s=${c.step}" style="width:150px;border-radius:8px;border:1px solid #333;image-rendering:pixelated;background:#000" onerror="this.style.visibility='hidden'">`+
+      `<div style=flex:1>▶ <b>${c.engine}</b> img ${c.img_index}/${c.count}${c.stage?' · <b style=color:#6cf>'+esc(c.stage)+'</b>':''} · step ${c.step}/${c.total_steps} · ${esc(c.status)}`+
+      `<div class=prog><i style=width:${pct}%></i></div>`+
+      `<div style=color:#778;font-size:11px;margin-top:4px>${esc(c.prompt.slice(0,110))}</div></div></div>`;}
+ if(c||(r.queue&&r.queue.length))
+   h+=` <button onclick=stopAll() style="margin-left:8px;padding:4px 12px;background:#a33;width:auto;display:inline-block">⏹ Stop all</button>`;
+ $('status').innerHTML=h;
+ const qb=$('queue');
+ if(r.queue&&r.queue.length){qb.style.display='block';
+  qb.innerHTML=`<b>⏳ Queue (${r.queue.length})</b> <span style=color:#778;font-size:11px>- remove individual jobs, keep the rest</span>`+
+   r.queue.map((q,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #222;font-size:12px">`+
+     `<span style=color:#667;width:18px>${i+1}.</span>`+
+     `<span style="background:#243;color:#9c9;border-radius:4px;padding:1px 6px">${esc(q.engine)}</span>`+
+     `<span style="flex:1;color:#bbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((q.prompt||'').slice(0,80))}</span>`+
+     `<span style=color:#667>×${q.count||1}</span>`+
+     `<button onclick="cancelOne('${q.id}')" style="margin:0;width:auto;padding:3px 10px;background:#722;font-size:12px">✕ remove</button>`+
+     `<button onclick="dupJob('${q.id}')" title="duplicate (new seed)" style="margin:0;width:auto;padding:3px 8px;background:#333;font-size:12px">⧉</button></div>`).join('');}
+ else qb.style.display='none';
+ const eb=$('errs');
+ if(r.errors&&r.errors.length){eb.style.display='block';
+  eb.innerHTML='⚠ <b>Generation failed</b> (fix and retry):'+
+   r.errors.map(e=>`<div style=margin-top:4px;font-size:12px>- ${esc(e.status)}</div>`).join('');}
+ else eb.style.display='none';
+ let g=r.gallery||[];
+ if(FILTER.engine)g=g.filter(x=>x.engine===FILTER.engine);
+ if(FILTER.fav)g=g.filter(x=>x.fav);
+ GAL=g;
+ // Filenames are server-listed but treated as untrusted: rendered only into esc()'d attributes
+ // and never into an inline-handler JS string (a crafted name can't break out -> no stored XSS).
+ // Clicks are handled by one delegated listener (gridClick) that reads the decoded data-name.
+ $('grid').innerHTML=g.map(x=>{const s=SEL.has(x.name);const n=esc(x.name);return `<div class=cell data-name="${n}" style="position:relative;${s?'outline:3px solid #3b82f6;outline-offset:-1px;border-radius:8px':''}">`+
+   `<img loading=lazy class=thumb src="/img/${eu(x.name)}">`+
+   `<input type=checkbox ${s?'checked':''} title=select class=selbox style="position:absolute;top:6px;left:6px;width:18px;height:18px;cursor:pointer;margin:0">`+
+   `<div style="position:absolute;top:5px;right:5px;display:flex;gap:4px">`+
+   `<span class=favbtn data-fav="${x.fav?0:1}" title=favorite style="cursor:pointer;background:#000a;border-radius:5px;padding:1px 5px;font-size:14px">${x.fav?'★':'☆'}</span>`+
+   `<span class=delbtn title=delete style="cursor:pointer;background:#000a;border-radius:5px;padding:1px 5px;font-size:13px">🗑</span></div>`+
+   `<div class=job>${esc(x.engine)}</div></div>`}).join('')||'<div style=color:#667;padding:20px>no images (change filter)</div>';
+ updSel();
+}
+let FILTER={engine:'',fav:false}, SEL=new Set(), GAL=[];
+function setFilter(){FILTER={engine:$('fEngine').value,fav:$('fFav').checked};}
+function toggleSel(n){SEL.has(n)?SEL.delete(n):SEL.add(n);updSel();}
+function selAll(){const all=GAL.every(x=>SEL.has(x.name));GAL.forEach(x=>all?SEL.delete(x.name):SEL.add(x.name));status();}
+function clearSel(){SEL.clear();status();}
+function updSel(){const el=$('selinfo');if(!el)return;
+ el.innerHTML=SEL.size?`${SEL.size} selected <button onclick=delSel() style="width:auto;margin:0;padding:2px 8px;font-size:11px;background:#722">🗑 Delete selected</button> <button onclick=clearSel() style="width:auto;margin:0;padding:2px 8px;font-size:11px;background:#333">Clear</button>`:'';}
+async function delSel(){if(!SEL.size)return;if(!confirm('Delete '+SEL.size+' selected images permanently?'))return;
+ await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:[...SEL]})});SEL.clear();}
+async function fav(name,on){await fetch('/api/favorite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,on:!!on})});}
+async function delImg(name){if(!confirm('Delete this image (and its sidecar) permanently?'))return;
+ SEL.delete(name);
+ await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});}
+async function dupJob(id){await fetch('/api/queue/dup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:id})});}
+async function stopAll(){msg("⏹ stopping…");await fetch('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:'all'})});msg("⏹ Stopped. Current image aborts at the next step; queue cleared.",true);}
+async function cancelOne(id){await fetch('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:id})});}
+async function showMeta(name){
+ const box=$('modal'),body=$('modalbody');box.style.display='flex';
+ body.innerHTML=`<img src="/img/${eu(name)}" style="max-width:46%;border-radius:8px"><div id=mtxt style=flex:1;overflow:auto>loading metadata…</div>`;
+ try{const m=await (await fetch('/api/meta/'+eu(name))).json();window._meta=m;
+  const btns=m.error?'':`<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">`+
+   `<button onclick=loadParams() style="margin:0;width:auto;padding:6px 10px;font-size:12px;background:#333">⬇ Load to form</button>`+
+   `<button onclick=rerun() style="margin:0;width:auto;padding:6px 10px;font-size:12px">↻ Re-run (same seed)</button>`+
+   `<button onclick="varyN(4)" style="margin:0;width:auto;padding:6px 10px;font-size:12px;background:#2a6">✨ Vary ×4</button></div>`;
+  $('mtxt').innerHTML=m.error?('⚠ '+esc(m.error)):('<h3 style=margin:0 0 8px>📄 Metadata / sidecar</h3>'+btns+
+   Object.entries(m).map(([k,v])=>`<div style="padding:3px 0;border-bottom:1px solid #222;font-size:12px"><b style=color:#6cf>${esc(k)}</b>: ${esc(String(v))}</div>`).join('')+
+   `<div style=margin-top:10px;font-size:11px;color:#778>file: ${esc(name)}</div>`);
+ }catch(e){$('mtxt').textContent='⚠ '+e;}
+}
+function closeMeta(){$('modal').style.display='none';}
+function _fmtFromWH(w,h){for(const k in FORMATS)if(FORMATS[k][0]==w&&FORMATS[k][1]==h)return k;return 'portrait';}
+function loadParams(){const m=window._meta;if(!m||m.error)return;
+ $('engine').value=m.engine;defs();$('prompt').value=m.prompt||'';$('negative').value=m.negative||'';
+ $('format').value=_fmtFromWH(m.width,m.height);$('steps').value=m.steps;$('cfg').value=m.cfg;
+ $('seed').value=m.seed||0;plen();saveCfg();closeMeta();
+ msg('⬇ Loaded params to the form. Adjust and click Generate.',true);}
+async function _post(b){return (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();}
+async function rerun(){const m=window._meta;if(!m||m.error)return;
+ await _post({engine:m.engine,prompt:m.prompt,negative:m.negative,width:m.width,height:m.height,steps:m.steps,cfg:m.cfg,seed:m.seed,count:1});
+ closeMeta();msg('↻ Re-run queued - same seed = same image.',true);}
+async function varyN(n){const m=window._meta;if(!m||m.error)return;
+ await _post({engine:m.engine,prompt:m.prompt,negative:m.negative,width:m.width,height:m.height,steps:m.steps,cfg:m.cfg,seed:0,count:n});
+ closeMeta();msg('✨ '+n+' variations queued - random seeds, same prompt.',true);}
+function defs(){const e=document.getElementById('engine').value,v=ENG[e]||{};
+ document.getElementById('steps').value=v.steps;document.getElementById('cfg').value=v.cfg;}
+const CAPS={zimage:768,pony:225};  // zimage HARD-truncates above cap; pony soft (Compel chunks long prompts)
+function plen(){
+ const t=$('prompt').value.trim(),el=$('plen');
+ if(!t){el.textContent='';return;}
+ const toks=Math.ceil(t.length/4),words=t.split(' ').filter(Boolean).length;
+ const e=$('engine').value,cap=CAPS[e]||512;let warn='',col='#6a6a78';
+ if(e==='zimage'&&toks>cap){col='#f55';warn=` ⚠ TOO LONG - Z-Image truncates past ~${cap} tokens. Shorten it, or move the important words to the FRONT.`;}
+ else if(e==='zimage'&&toks>cap*0.8){col='#fb4';warn=` ⚠ near the Z-Image limit (~${cap} tok) - the tail may be cut.`;}
+ else if(toks>cap){col='#fb4';warn=' ⚠ long prompt - Pony handles it (chunked), but too much detail dilutes attention; put the key words first.';}
+ el.style.color=col;el.textContent=`~${toks} tokens · ${words} words${warn}`;
+}
+const $=id=>document.getElementById(id);  // id=prompt collides with window.prompt -> always use this
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const eu=encodeURIComponent;  // for URL path segments (filenames in /img, /api/meta)
+const FORMATS={portrait:[832,1216],tall:[768,1344],square:[1024,1024],landscape:[1216,832],wide:[1344,768]};
+function msg(t,ok){const m=$('msg');m.style.color=ok?'#4f4':'#fb4';m.textContent=t;}
+async function gen(){
+ const p=$('prompt').value.trim();
+ if(!p){msg("⚠ Type a prompt - an English description of what you want. "+
+   "Example: 'a fit woman working out at the gym, sweaty, candid photo'.");return;}
+ if(p.length<8){msg("⚠ Prompt too short. Add detail (who, where, doing what, style) - e.g. 'a fit woman lifting dumbbells in a sunlit gym, athletic, candid photo'.");return;}
+ const [w,h]=FORMATS[$('format').value]||FORMATS.portrait;
+ const b={engine:$('engine').value,prompt:p,negative:$('negative').value.trim(),
+   steps:+$('steps').value,cfg:+$('cfg').value,width:w,height:h,
+   count:+$('count').value,seed:+$('seed').value};
+ msg("⏳ sending…");
+ try{
+  const r=await (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();
+  if(r.error){msg("⚠ "+r.error);return;}
+  msg("✓ Queued (position "+r.queue_pos+"). Live preview appears at the top; the finished image lands in the gallery.",true);
+ }catch(e){msg("⚠ Server not responding. Check the app is running (terminal window). Details: "+e);}
+}
+// --- settings persistence (localStorage) ---
+const CFG_KEYS=['engine','format','steps','cfg','prompt','negative','count'];
+function saveCfg(){try{const o={};CFG_KEYS.forEach(k=>{const el=$(k);if(el)o[k]=el.value;});localStorage.setItem('genui_cfg',JSON.stringify(o));}catch(e){}}
+function loadCfg(){try{const o=JSON.parse(localStorage.getItem('genui_cfg')||'{}');CFG_KEYS.forEach(k=>{const el=$(k);if(el&&o[k]!=null&&o[k]!=='')el.value=o[k];});}catch(e){}}
+// --- gallery clicks via delegation (no inline handlers carry the filename) ---
+function gridClick(e){
+ const cell=e.target.closest('.cell');if(!cell)return;
+ const name=cell.dataset.name;  // browser-decoded back to the real filename
+ if(e.target.classList.contains('selbox')){e.stopPropagation();toggleSel(name);return;}
+ if(e.target.classList.contains('favbtn')){e.stopPropagation();fav(name,+e.target.dataset.fav);return;}
+ if(e.target.classList.contains('delbtn')){e.stopPropagation();delImg(name);return;}
+ if(e.target.classList.contains('thumb'))showMeta(name);
+}
+document.addEventListener('DOMContentLoaded',()=>{const grid=$('grid');if(grid)grid.addEventListener('click',gridClick);});
+// --- keyboard: Cmd/Ctrl+Enter = Generate, Esc = close modal ---
+document.addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();gen();}
+ if(e.key==='Escape')closeMeta();
+});
+// --- age gate (first run) ---
+function ageOk(){localStorage.setItem('genui_age_ok','1');const e=$('agegate');if(e)e.remove();}
+function ageExit(){location.href='https://www.google.com';}
+function ageGate(){
+ if(localStorage.getItem('genui_age_ok'))return;
+ const o=document.createElement('div');o.id='agegate';
+ o.style='position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center;padding:24px';
+ o.innerHTML='<div style="background:#16161c;border:1px solid #444;border-radius:12px;padding:24px;max-width:440px;text-align:center">'+
+  '<h2 style=margin:0 0 10px>🔞 Adult content</h2>'+
+  '<p style="font-size:13px;color:#aab;line-height:1.5">This app can generate 18+ (NSFW) content, locally on your own machine and responsibility. Are you 18 or older?</p>'+
+  '<div style="display:flex;gap:8px;margin-top:14px;justify-content:center">'+
+  '<button onclick=ageOk() style="width:auto;background:#2a6;padding:8px 16px">I am 18+ - enter</button>'+
+  '<button onclick=ageExit() style="width:auto;background:#722;padding:8px 16px">Exit</button></div></div>';
+ document.body.appendChild(o);
+}
+$('side').addEventListener('input',saveCfg);
+$('side').addEventListener('change',saveCfg);
+ageGate();
+status();setInterval(status,1500);
+</script></body></html>

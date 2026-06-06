@@ -1,0 +1,25 @@
+# Verified by a clean-room install on Apple Silicon macOS (Python 3.12): these exact pins
+# resolve, import, and report MPS available. torch 2.12 is STABLE (no nightly needed).
+#
+# NOTE: install with pre-releases allowed - diffusers 0.38 requires safetensors>=0.8.0rc0
+# (a pre-release), so a plain `pip install` fails with "No solution found". scripts/install.sh
+# passes --prerelease=allow for you; if you install by hand, add that flag.
+torch==2.12.0
+torchvision==0.27.0
+diffusers==0.38.0
+transformers==5.10.2
+accelerate==1.13.0
+huggingface_hub==1.18.0          # provides the `hf` CLI used to download the model
+safetensors==0.8.0rc1            # pre-release pulled in by diffusers 0.38 (see note above)
+compel==2.4.0
+fastapi==0.136.3
+uvicorn==0.49.0
+pillow==12.2.0
+numpy==2.4.4
+pyyaml==6.0.3
+
+# Optional curation stages (face / feet / hands). The app runs fine without them on Z-Image
+# alone; they are only used by the curated SDXL engine when you configure detector models.
+onnxruntime==1.26.0
+opencv-python==4.13.0.92
+mediapipe==0.10.35

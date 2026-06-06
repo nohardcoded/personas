@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/nohardcoded/personas/security/advisories/new
+    about: Report a vulnerability privately - do not open a public issue for security bugs.
+  - name: Troubleshooting
+    url: https://github.com/nohardcoded/personas/blob/main/docs/TROUBLESHOOTING.md
+    about: Black images, slow first run, model paths, and other common fixes.

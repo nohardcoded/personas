@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a clear report. Please fill in the fields below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: Steps to reproduce + expected vs actual.
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac / chip
+      placeholder: e.g. MacBook Pro M3 Max
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: e.g. 14.5
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine
+      options:
+        - Z-Image
+        - SDXL (curated)
+        - both / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal output
+      description: Paste the relevant output from the terminal running the app. Remove anything private.
+      render: shell
+    validations:
+      required: false

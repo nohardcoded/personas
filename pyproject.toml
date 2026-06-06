@@ -1,0 +1,28 @@
+[project]
+name = "persona-gen"
+version = "0.1.0"
+description = "Local image generation studio (FastAPI UI + SDXL/Z-Image engines) for Apple Silicon"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"   # installer provisions 3.12; verified on the pinned stack
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E741"]   # ambiguous var name 'L'/'T' (image box coords - intentional)
+
+[tool.ruff.format]
+quote-style = "double"
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
