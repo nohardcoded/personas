@@ -7,6 +7,7 @@
 A clean web UI over two image engines, with a live preview that sharpens step by step and a
 provenance sidecar for every image you make. Built for Apple Silicon.
 
+[![CI](https://github.com/nohardcoded/personas/actions/workflows/ci.yml/badge.svg)](https://github.com/nohardcoded/personas/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Platform: macOS (Apple Silicon)](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?logo=apple)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)
